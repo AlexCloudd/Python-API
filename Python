@@ -1,0 +1,141 @@
+import aiohttp
+import asyncio
+from tabulate import tabulate
+import random
+
+base_api_url = "https://api.api-ninjas.com/v1/"
+
+async def api_request(session, endpoint, params=None):
+    headers = {"X-Api-Key": "cu8BHVj4VLCWe6WHX8Scbw==3skxeQjAfhTvkYbm"}
+    url = base_api_url + endpoint
+    
+    try:
+        async with session.get(url, headers=headers, params=params) as response:
+            if response.status == 200:
+                return await response.json()
+            print(f"Ошибка API: {response.status} - {await response.text()}")
+            return None
+    except Exception as e:
+        print(f"Ошибка соединения: {str(e)}")
+        return None    
+
+async def get_country_info(session, country_name):
+    params = {"name": country_name}
+    data = await api_request(session, "country", params)
+    return data[0] if data else None
+    
+async def get_city_info(session, city_name):
+    params = {"name": city_name}
+    data = await api_request(session, "city", params)
+    return data[0] if data else None
+
+async def get_random_city(session):
+    major_cities = ["New York", "London", "Paris", "Berlin", "Moscow", 
+                   "Tokyo", "Beijing", "Sydney", "Cairo", "Rio de Janeiro"]
+    city_name = random.choice(major_cities)
+    return await get_city_info(session, city_name)
+
+async def get_random_country(session):
+    major_country = ["United States", "China", "Japan", "Germany", "United Kingdom",
+        "France", "Brazil", "Italy", "Canada", "Russia", "India",
+        "Australia", "Spain", "Mexico", "South Korea"]
+    country_name = random.choice(major_country)
+    return await get_country_info(session, country_name)
+
+async def get_cities_in_country(session, country_name):
+    country_data = await get_country_info(session, country_name)
+    if not country_data:
+        print("Страна не найдена")
+        return
+
+    country_code = country_data.get('iso2')
+
+    params = {"country": country_code}
+    
+    data = await api_request(session, "city", params)
+    
+    if not data:
+        print("Города в указанной стране не найдены.")
+        return
+
+    table_city = []
+    
+    for city in data[:10]:  
+        table_city.append([
+            city.get('name', 'Н/Д'), 
+            city.get('country', 'Н/Д'), 
+            f"{city.get('population', 'Н/Д'):,}",
+            "Да" if city.get('is_capital', False) else "Нет"
+        ])
+        
+    print(f"\nГорода страны {country_name}:") 
+    print(tabulate(
+        table_city,
+        headers=["Город", "Страна", "Население", "Столица"],
+        tablefmt="grid"
+    ))
+    
+async def main():
+    timeout = aiohttp.ClientTimeout(total=5)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        while True:   
+            print("\nМеню:")
+            print("1. Получить информацию о стране")       
+            print("2. Получить информацию о городе")       
+            print("3. Показать города из указанной страны")
+            print("4. Показать случайный город")
+            print("5. Показать случайную страну")
+            print("6. Выход")
+            
+            choice = input("Выберите действие от 1 до 5: ") 
+            
+            if choice == "1":
+                name = input("Введите название страны: ") 
+                data = await get_country_info(session, name)
+                
+                if data:
+                    print(f"\nИнформация о стране:")
+                    print(f"Название: {data.get('name', 'Н/Д')}")
+                    print(f"Столица: {data.get('capital', 'Н/Д')}")
+                    print(f"Население: {data.get('population', 'Н/Д')}")
+                    print(f"Код страны: {data.get('iso2', 'Н/Д')}")
+            
+            elif choice == "2":
+                name = input("Введите название города: ") 
+                data = await get_city_info(session, name)
+                
+                if data:
+                    print(f"\nИнформация о городе:")
+                    print(f"Название: {data.get('name', 'Н/Д')}")
+                    print(f"Страна: {data.get('country', 'Н/Д')}")
+                    print(f"Население: {data.get('population', 'Н/Д')}")
+                    
+            elif choice == "3":
+                name = input("Введите название страны: ")
+                await get_cities_in_country(session, name)
+                
+            elif choice == "4":
+                data = await get_random_city(session)
+                
+                if data:
+                    print(f"\nСлучайный город:")
+                    print(f"Название: {data.get('name', 'Н/Д')}")
+                    print(f"Страна: {data.get('country', 'Н/Д')}")
+                    print(f"Население: {data.get('population', 'Н/Д')}")
+            elif choice == "5":
+                data = await get_random_country(session)
+                
+                if data:
+                    print(f"\nИнформация о стране:")
+                    print(f"Название: {data.get('name', 'Н/Д')}")
+                    print(f"Столица: {data.get('capital', 'Н/Д')}")
+                    print(f"Население: {data.get('population', 'Н/Д')}")
+                    print(f"Код страны: {data.get('iso2', 'Н/Д')}") 
+                                       
+            elif choice == "6":
+                break   
+            else:
+                print("Неверный ввод данных")     
+    
+if __name__ == "__main__":
+    asyncio.run(main())
