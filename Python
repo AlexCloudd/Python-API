@@ -5,9 +5,9 @@ import random
 
 base_api_url = "https://api.api-ninjas.com/v1/"
 
-async def api_request(session, endpoint, params=None):
-    headers = {"X-Api-Key": "cu8BHVj4VLCWe6WHX8Scbw==3skxeQjAfhTvkYbm"}
-    url = base_api_url + endpoint
+async def api_request(session, dop, params=None):
+    headers = {"X-Api-Key": ""}
+    url = base_api_url + dop
     
     try:
         async with session.get(url, headers=headers, params=params) as response:
